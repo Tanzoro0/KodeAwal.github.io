@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KodeAwal - Platform Belajar Coding</title>
+<style>
+  :root { --bg:#fff; --surface:#f6f6f4; --text:#1a1a1a; --muted:#6b6b6b; --line:#e3e3df; --hover:#6fb39b; --ok:#2f5d50; --warn:#8a6a1f; box-sizing:border-box; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151515; --surface:#1e1e1e; --text:#ececec; --muted:#9a9a9a; --line:#2e2e2e; --hover:#3f8a74; --ok:#8fc7b4; --warn:#d4b36a; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-size:16px; line-height:1.6; }
+  a { color:inherit; }
+  button, input, textarea, select { font:inherit; }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 20px; }
+  header { border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+  .nav { display:flex; align-items:center; justify-content:space-between; height:58px; gap:10px; flex-wrap:wrap; }
+  .brand { font-weight:700; text-decoration:none; }
+  .links { display:flex; gap:4px; flex-wrap:wrap; }
+  .links button { background:none; border:0; padding:6px 10px; border-radius:6px; font-size:14px; color:var(--muted); cursor:pointer; }
+  .links button:hover, .links button.on { background:var(--hover); color:#fff; }
+  h1 { font-size:clamp(24px,4vw,32px); margin:28px 0 10px; }
+  h2 { font-size:19px; margin:22px 0 10px; font-weight:600; }
+  h3 { font-size:16px; margin:0 0 6px; }
+  p { margin:0 0 12px; color:var(--muted); }
+  .txt { color:var(--text); }
+  .btn { border:1px solid var(--text); background:var(--text); color:var(--bg); padding:9px 16px; border-radius:8px; font-size:14px; cursor:pointer; }
+  .btn:hover:not(:disabled) { background:var(--hover); border-color:var(--hover); color:#fff; }
+  .btn.ghost { background:transparent; color:var(--text); }
+  .btn.ghost:hover:not(:disabled) { background:var(--hover); color:#fff; border-color:var(--hover); }
+  .btn.small { padding:6px 12px; font-size:13px; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  input.field, textarea.field, select.field { width:100%; max-width:420px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:14px; margin-bottom:10px; display:block; }
+  textarea.field { min-height:150px; max-width:100%; resize:vertical; }
+  .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+  .card { border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card:hover { background:var(--hover); border-color:var(--hover); color:#fff; }
+  .card:hover p, .card:hover h3 { color:#fff; }
+  .layout { display:grid; gap:22px; grid-template-columns:1fr; }
+  @media (min-width:860px) { .layout { grid-template-columns:260px 1fr; } }
+  .lesson { display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:8px; font-size:14px; cursor:pointer; }
+  .lesson:hover:not(:disabled) { background:var(--hover); border-color:var(--hover); color:#fff; }
+  .lesson.cur { border-color:var(--text); font-weight:600; }
+  .lesson:disabled { color:var(--muted); cursor:not-allowed; }
+  .badge { font-size:12px; color:var(--muted); white-space:nowrap; }
+  .body { white-space:pre-wrap; color:var(--text); font-size:15px; }
+  pre { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; overflow-x:auto; font-size:13px; }
+  .panel { border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:16px; }
+  .msg { font-size:14px; margin-top:8px; min-height:20px; }
+  .msg.ok { color:var(--ok); } .msg.warn { color:var(--warn); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; }
+  tr:hover td { background:var(--hover); color:#fff; }
+  .scroll { overflow-x:auto; }
+  .shot { max-width:100%; max-height:260px; border-radius:8px; border:1px solid var(--line); display:block; margin-top:8px; }
+  .hidden { display:none !important; }
+  .q { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ISI DUA NILAI INI DARI DASHBOARD SUPABASE > Project Settings > API -->
+<script>
+  const SUPABASE_URL = "ISI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "ISI_ANON_KEY";
+</script>
+
+<header><div class="wrap nav">
+  <a class="brand" href="#" id="brand">KodeAwal</a>
+  <nav class="links hidden" id="links"></nav>
+</div></header>
+
+<main class="wrap">
+  <!-- AUTH -->
+  <section id="auth" class="hidden" style="max-width:420px;">
+    <h1 id="authTitle">Masuk</h1>
+    <div id="signupFields" class="hidden"><input class="field" id="sName" placeholder="Nama lengkap"></div>
+    <input class="field" id="sEmail" type="email" placeholder="Email">
+    <input class="field" id="sPass" type="password" placeholder="Kata sandi (minimal 6 karakter)">
+    <div class="row">
+      <button class="btn" id="authBtn">Masuk</button>
+      <button class="btn ghost" id="toggleAuth">Belum punya akun? Daftar</button>
+    </div>
+    <div class="msg" id="authMsg"></div>
+  </section>
+
+  <!-- BELAJAR -->
+  <section id="v-learn" class="hidden">
+    <h1>Belajar</h1>
+    <div class="row" id="langTabs"></div>
+    <div class="layout">
+      <aside id="lessonList"></aside>
+      <div id="lessonView"></div>
+    </div>
+  </section>
+
+  <!-- PROGRES -->
+  <section id="v-progress" class="hidden">
+    <h1>Progres saya</h1>
+    <div class="grid" id="myStats"></div>
+    <h2>Per bahasa</h2>
+    <div class="scroll"><table><thead><tr><th>Bahasa</th><th>Disetujui</th><th>Persen</th></tr></thead><tbody id="progTable"></tbody></table></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="v-admin" class="hidden">
+    <h1>Dashboard admin</h1>
+    <div class="row">
+      <button class="btn small" data-ad="review">Review bukti</button>
+      <button class="btn small ghost" data-ad="siswa">Laporan siswa</button>
+      <button class="btn small ghost" data-ad="materi">Edit materi</button>
+    </div>
+    <div id="ad-review"></div>
+    <div id="ad-siswa" class="hidden"></div>
+    <div id="ad-materi" class="hidden"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const LANGS = { c: "Bahasa C", py: "Python", html: "HTML", css: "CSS", js: "JavaScript" };
+
+  if (SUPABASE_URL.startsWith("ISI_")) {
+    document.body.insertAdjacentHTML("afterbegin", "<p class='wrap' style='color:var(--warn)'>Isi SUPABASE_URL dan SUPABASE_ANON_KEY di index.html terlebih dahulu.</p>");
+  }
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let me = null;           // profil pengguna
+  let lessons = [];        // semua materi, urut lang lalu position
+  let subs = {};           // lesson_id -> submission milik saya
+  let prog = {};           // lesson_id -> progress milik saya
+  let cur = { lang: "c", lesson: null };
+  let signupMode = false;
+  let pendingFile = null;
+
+  // ---------- Data ----------
+  const langLessons = lang => lessons.filter(l => l.lang === lang);
+  function unlocked(l) {
+    const same = langLessons(l.lang);
+    const idx = same.findIndex(x => x.id === l.id);
+    if (idx === 0) return true;
+    const prev = same[idx - 1];
+    return subs[prev.id] && subs[prev.id].status === "approved";
+  }
+  function statusOf(l) {
+    if (!unlocked(l)) return "Terkunci";
+    const s = subs[l.id];
+    if (s && s.status === "approved") return "Disetujui";
+    if (s && s.status === "rejected") return "Ditolak";
+    if (s) return "Menunggu";
+    if (prog[l.id] && prog[l.id].watched) return "Sudah dibaca";
+    return "Belum";
+  }
+
+  async function loadMine() {
+    const uid = me.id;
+    const [{ data: ls }, { data: ss }, { data: ps }] = await Promise.all([
+      sb.from("lessons").select("id,lang,position,title,body,quiz").order("lang").order("position"),
+      sb.from("submissions").select("*").eq("user_id", uid),
+      sb.from("progress").select("*").eq("user_id", uid)
+    ]);
+    lessons = ls || [];
+    subs = {}; (ss || []).forEach(s => subs[s.lesson_id] = s);
+    prog = {}; (ps || []).forEach(p => prog[p.lesson_id] = p);
+  }
+
+  async function saveProgress(lessonId, patch) {
+    const row = Object.assign({ user_id: me.id, lesson_id: lessonId }, prog[lessonId] || {}, patch);
+    prog[lessonId] = row;
+    const { error } = await sb.from("progress").upsert(row, { onConflict: "user_id,lesson_id" });
+    return error;
+  }
+
+  // ---------- Auth ----------
+  function showAuth(msg) {
+    $("auth").classList.remove("hidden");
+    ["v-learn", "v-progress", "v-admin"].forEach(v => $(v).classList.add("hidden"));
+    $("links").classList.add("hidden");
+    if (msg) $("authMsg").textContent = msg;
+  }
+  $("toggleAuth").addEventListener("click", () => {
+    signupMode = !signupMode;
+    $("authTitle").textContent = signupMode ? "Daftar" : "Masuk";
+    $("authBtn").textContent = signupMode ? "Daftar" : "Masuk";
+    $("toggleAuth").textContent = signupMode ? "Sudah punya akun? Masuk" : "Belum punya akun? Daftar";
+    $("signupFields").classList.toggle("hidden", !signupMode);
+    $("authMsg").textContent = "";
+  });
+  $("authBtn").addEventListener("click", async () => {
+    const email = $("sEmail").value.trim(), password = $("sPass").value;
+    $("authBtn").disabled = true; $("authMsg").className = "msg";
+    let error;
+    if (signupMode) {
+      const name = $("sName").value.trim() || "Siswa";
+      ({ error } = await sb.auth.signUp({ email, password, options: { data: { name } } }));
+      if (!error) $("authMsg").textContent = "Pendaftaran berhasil. Jika diminta, cek email untuk konfirmasi lalu masuk.";
+    } else {
+      ({ error } = await sb.auth.signInWithPassword({ email, password }));
+      if (!error) return start();
+    }
+    if (error) { $("authMsg").classList.add("warn"); $("authMsg").textContent = error.message; }
+    $("authBtn").disabled = false;
+  });
+
+  // ---------- Aplikasi ----------
+  async function start() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return showAuth();
+    const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).single();
+    me = Object.assign({ id: user.id }, profile || { name: "Siswa", role: "siswa" });
+    await loadMine();
+    $("auth").classList.add("hidden");
+    $("links").classList.remove("hidden");
+    $("links").innerHTML = "<button data-go='learn'>Belajar</button><button data-go='progress'>Progres</button>" +
+      (me.role === "admin" ? "<button data-go='admin'>Admin</button>" : "") + "<button id='logout'>Keluar</button>";
+    $("links").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+    $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+    go(location.hash.replace("#", "") || "learn");
+  }
+
+  function go(view) {
+    if (view === "admin" && me.role !== "admin") view = "learn";
+    ["v-learn", "v-progress", "v-admin"].forEach(v => $(v).classList.add("hidden"));
+    $("v-" + view).classList.remove("hidden");
+    $("links").querySelectorAll("[data-go]").forEach(b => b.classList.toggle("on", b.dataset.go === view));
+    if (view === "learn") renderLearn();
+    if (view === "progress") renderProgress();
+    if (view === "admin") renderAdminReview();
+    history.replaceState(null, "", "#" + view);
+  }
+
+  // ---------- Belajar ----------
+  function renderLearn() {
+    $("langTabs").innerHTML = Object.keys(LANGS).map(k =>
+      `<button class="btn small ${k === cur.lang ? "" : "ghost"}" data-lang="${k}">${LANGS[k]}</button>`).join("");
+    $("langTabs").querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
+      cur = { lang: b.dataset.lang, lesson: null }; renderLearn();
+    }));
+    const list = langLessons(cur.lang);
+    if (!cur.lesson) cur.lesson = list[0] && list[0].id;
+    $("lessonList").innerHTML = list.map(l => {
+      const ok = unlocked(l);
+      return `<button class="lesson ${l.id === cur.lesson ? "cur" : ""}" data-id="${l.id}" ${ok ? "" : "disabled"}>
+        <span>${l.position}. ${esc(l.title)}</span><span class="badge">${statusOf(l)}</span></button>`;
+    }).join("");
+    $("lessonList").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
+      cur.lesson = Number(b.dataset.id); pendingFile = null; renderLearn();
+    }));
+    renderLesson();
+  }
+
+  function renderLesson() {
+    const l = lessons.find(x => x.id === cur.lesson);
+    if (!l) { $("lessonView").innerHTML = "<p>Pilih materi.</p>"; return; }
+    const ok = unlocked(l), s = subs[l.id], p = prog[l.id] || {};
+    const body = l.body && l.body.trim() ? esc(l.body) : "Materi ini belum diisi. Admin dapat menambahkannya dari menu Edit materi.";
+    const quizHtml = (l.quiz || []).length ? "" : "";
+    $("lessonView").innerHTML = `
+      <h2 style="margin-top:0">${esc(l.title)}</h2>
+      ${ok ? "" : "<p class='msg warn'>Materi ini terkunci. Selesaikan materi sebelumnya dan dapatkan persetujuan admin.</p>"}
+      <div class="body">${body}</div>
+      ${ok && !p.watched ? "<div class='row'><button class='btn ghost small' id='readBtn'>Tandai sudah dibaca</button></div>" : ""}
+      <div class="panel">
+        <h3>Kirim bukti latihan</h3>
+        <p>Buat program atau halaman kecil tentang "${esc(l.title)}", ambil screenshot hasilnya, lalu kirim.</p>
+        <input type="file" id="file" accept="image/*" ${ok && p.watched ? "" : "disabled"}>
+        <img id="preview" class="shot hidden" alt="">
+        <div class="row"><button class="btn" id="sendBtn" disabled>Kirim screenshot</button></div>
+        <div class="msg" id="sendMsg">${!ok ? "Materi terkunci." : !p.watched ? "Tandai sudah dibaca dulu." : s && s.status === "approved" ? "Disetujui admin." : s && s.status === "pending" ? "Menunggu review admin. Kamu bisa mengirim ulang jika ingin mengganti." : s && s.status === "rejected" ? "Ditolak. Kirim screenshot yang lebih jelas." : ""}</div>
+        ${s && s.status === "approved" ? "" : ""}
+      </div>
+      <div class="panel">
+        <h3>Catatan pribadi</h3>
+        <textarea class="field" id="notes" placeholder="Tulis catatan untuk materi ini...">${esc(p.notes || "")}</textarea>
+        <div class="row"><button class="btn ghost small" id="saveNotes">Simpan catatan</button>
+          <button class="btn ghost small" id="bookmark">${p.bookmarked ? "Hapus simpanan" : "Simpan materi"}</button></div>
+      </div>`;
+
+    const readBtn = $("readBtn");
+    if (readBtn) readBtn.addEventListener("click", async () => {
+      const err = await saveProgress(l.id, { watched: true });
+      if (err) alert("Gagal menyimpan: " + err.message);
+      renderLearn();
+    });
+    $("saveNotes").addEventListener("click", async () => {
+      const err = await saveProgress(l.id, { notes: $("notes").value });
+      alert(err ? "Gagal menyimpan: " + err.message : "Catatan tersimpan.");
+    });
+    $("bookmark").addEventListener("click", async () => {
+      await saveProgress(l.id, { bookmarked: !p.bookmarked }); renderLesson();
+    });
+    $("file").addEventListener("change", e => {
+      pendingFile = e.target.files[0] || null;
+      const img = $("preview");
+      if (pendingFile) { img.src = URL.createObjectURL(pendingFile); img.classList.remove("hidden"); }
+      $("sendBtn").disabled = !pendingFile;
+    });
+    $("sendBtn").addEventListener("click", () => sendProof(l));
+  }
+
+  async function sendProof(l) {
+    const msg = $("sendMsg");
+    if (!pendingFile) { msg.className = "msg warn"; msg.textContent = "Pilih screenshot dulu."; return; }
+    const btn = $("sendBtn"); btn.disabled = true;
+    msg.className = "msg"; msg.textContent = "Mengirim...";
+    const ext = (pendingFile.name.split(".").pop() || "png").toLowerCase();
+    const path = `${me.id}/${l.id}.${ext}`;
+    const up = await sb.storage.from("screenshots").upload(path, pendingFile, { upsert: true, contentType: pendingFile.type });
+    if (up.error) { msg.className = "msg warn"; msg.textContent = "Gagal upload: " + up.error.message; btn.disabled = false; return; }
+    const { error } = await sb.from("submissions").upsert(
+      { user_id: me.id, lesson_id: l.id, image_path: path, status: "pending", created_at: new Date().toISOString(), reviewed_at: null, reviewed_by: null },
+      { onConflict: "user_id,lesson_id" });
+    if (error) { msg.className = "msg warn"; msg.textContent = "Gagal menyimpan bukti: " + error.message; btn.disabled = false; return; }
+    pendingFile = null;
+    await loadMine();
+    renderLearn();
+  }
+
+  // ---------- Progres ----------
+  function renderProgress() {
+    const done = lessons.filter(l => subs[l.id] && subs[l.id].status === "approved").length;
+    const watched = Object.values(prog).filter(p => p.watched).length;
+    $("myStats").innerHTML = `
+      <div class="card"><p>Materi disetujui</p><h3>${done} dari ${lessons.length}</h3></div>
+      <div class="card"><p>Materi sudah dibaca</p><h3>${watched}</h3></div>
+      <div class="card"><p>Menunggu review</p><h3>${Object.values(subs).filter(s => s.status === "pending").length}</h3></div>`;
+    $("progTable").innerHTML = Object.keys(LANGS).map(k => {
+      const ls = langLessons(k);
+      const n = ls.filter(l => subs[l.id] && subs[l.id].status === "approved").length;
+      return `<tr><td>${LANGS[k]}</td><td>${n} dari ${ls.length}</td><td>${ls.length ? Math.round(n / ls.length * 100) : 0}%</td></tr>`;
+    }).join("");
+  }
+
+  // ---------- Admin ----------
+  document.querySelectorAll("[data-ad]").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-ad]").forEach(x => x.className = "btn small " + (x === b ? "" : "ghost"));
+    ["review", "siswa", "materi"].forEach(k => $("ad-" + k).classList.toggle("hidden", k !== b.dataset.ad));
+    if (b.dataset.ad === "review") renderAdminReview();
+    if (b.dataset.ad === "siswa") renderAdminStudents();
+    if (b.dataset.ad === "materi") renderAdminContent();
+  }));
+
+  async function renderAdminReview() {
+    const box = $("ad-review");
+    box.innerHTML = "<p>Memuat...</p>";
+    const { data, error } = await sb.from("submissions").select("id,user_id,lesson_id,image_path,created_at,status,lessons(title,lang)").eq("status", "pending").order("created_at");
+    if (error) { box.innerHTML = `<p class="msg warn">${esc(error.message)}</p>`; return; }
+    if (!data.length) { box.innerHTML = "<p>Tidak ada bukti yang menunggu review.</p>"; return; }
+    const names = await userNames(data.map(d => d.user_id));
+    box.innerHTML = "";
+    for (const s of data) {
+      const { data: signed } = await sb.storage.from("screenshots").createSignedUrl(s.image_path, 600);
+      const div = document.createElement("div");
+      div.className = "panel";
+      div.innerHTML = `<div class="row" style="align-items:flex-start;">
+        <img class="shot" style="width:180px;height:120px;object-fit:cover;margin:0" src="${signed ? signed.signedUrl : ""}" alt="">
+        <div style="flex:1;min-width:200px">
+          <h3>${esc(s.lessons.title)}</h3>
+          <p>${esc(LANGS[s.lessons.lang])} | ${esc(names[s.user_id] || "Siswa")} | ${new Date(s.created_at).toLocaleDateString("id-ID")}</p>
+          <div class="row"><button class="btn small">Setujui</button><button class="btn small ghost">Tolak</button></div>
+        </div></div>`;
+      const [ok, no] = div.querySelectorAll("button");
+      ok.addEventListener("click", () => decide(s.id, "approved"));
+      no.addEventListener("click", () => decide(s.id, "rejected"));
+      box.appendChild(div);
+    }
+  }
+  async function decide(id, status) {
+    const { error } = await sb.from("submissions").update({ status, reviewed_at: new Date().toISOString(), reviewed_by: me.id }).eq("id", id);
+    if (error) alert("Gagal: " + error.message);
+    renderAdminReview();
+  }
+  async function userNames(ids) {
+    const uniq = [...new Set(ids)];
+    if (!uniq.length) return {};
+    const { data } = await sb.from("profiles").select("id,name").in("id", uniq);
+    const out = {}; (data || []).forEach(p => out[p.id] = p.name); return out;
+  }
+
+  async function renderAdminStudents() {
+    const box = $("ad-siswa");
+    box.innerHTML = "<p>Memuat...</p>";
+    const [{ data: profs }, { data: subsAll }] = await Promise.all([
+      sb.from("profiles").select("id,name,role"),
+      sb.from("submissions").select("user_id,status")
+    ]);
+    const rows = (profs || []).map(p => {
+      const mine = (subsAll || []).filter(s => s.user_id === p.id);
+      return { name: p.name, role: p.role, approved: mine.filter(s => s.status === "approved").length, pending: mine.filter(s => s.status === "pending").length };
+    });
+    box.innerHTML = `<div class="scroll"><table><thead><tr><th>Nama</th><th>Peran</th><th>Disetujui</th><th>Menunggu</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.role)}</td><td>${r.approved}</td><td>${r.pending}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  }
+
+  async function renderAdminContent() {
+    const box = $("ad-materi");
+    const opts = lessons.map(l => `<option value="${l.id}">${LANGS[l.lang]} | ${l.position}. ${esc(l.title)}</option>`).join("");
+    box.innerHTML = `<div class="panel">
+      <select class="field" id="mSel">${opts}</select>
+      <input class="field" id="mTitle" placeholder="Judul">
+      <textarea class="field" id="mBody" placeholder="Isi materi. Tulis contoh kode seperti biasa."></textarea>
+      <div class="row"><button class="btn" id="mSave">Simpan materi</button><span class="msg" id="mMsg"></span></div>
+    </div>`;
+    const fill = () => {
+      const l = lessons.find(x => x.id === Number($("mSel").value));
+      $("mTitle").value = l.title; $("mBody").value = l.body || "";
+    };
+    $("mSel").addEventListener("change", fill); fill();
+    $("mSave").addEventListener("click", async () => {
+      const id = Number($("mSel").value);
+      const { error } = await sb.from("lessons").update({ title: $("mTitle").value.trim(), body: $("mBody").value }).eq("id", id);
+      $("mMsg").textContent = error ? "Gagal: " + error.message : "Tersimpan.";
+      if (!error) { await loadMine(); renderAdminContent(); }
+    });
+  }
+
+  // ---------- Mulai ----------
+  async function boot() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) start(); else showAuth();
+  }
+  boot();
+</script>
+</body>
+</html>
