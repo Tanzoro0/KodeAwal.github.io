@@ -69,8 +69,8 @@
 
 <!-- ISI DUA NILAI INI DARI DASHBOARD SUPABASE > Project Settings > API -->
 <script>
-const SUPABASE_URL = "https://vfimjafuslygvwwyqwks.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
+  const SUPABASE_URL = "ISI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "ISI_ANON_KEY";
 </script>
 
 <header><div class="wrap nav">
@@ -300,6 +300,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
     return me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="Foto profil">` : esc(initials(me.name));
   }
   function renderAccount() {
+    wireAccount();
     $("acct").classList.remove("hidden");
     $("acctBtn").innerHTML = avatarInner();
   }
