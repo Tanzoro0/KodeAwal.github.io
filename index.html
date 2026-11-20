@@ -55,6 +55,12 @@
   .scroll { overflow-x:auto; }
   .shot { max-width:100%; max-height:260px; border-radius:8px; border:1px solid var(--line); display:block; margin-top:8px; }
   .hidden { display:none !important; }
+  @media print {
+    body * { visibility:hidden; }
+    .cert.printing, .cert.printing * { visibility:visible; }
+    .cert.printing { position:absolute; left:0; top:0; width:100%; border:3px double #1a1a1a; color:#1a1a1a; background:#fff; }
+    .no-print { display:none !important; }
+  }
   .acct { position:relative; margin-left:auto; }
   .avatar { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--text); display:inline-flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; font-size:13px; font-weight:600; padding:0; }
   .avatar img { width:100%; height:100%; object-fit:cover; }
@@ -97,6 +103,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
       <button class="btn ghost" id="toggleAuth">Belum punya akun? Daftar</button>
     </div>
     <div class="msg" id="authMsg"></div>
+  </section>
+
+  <!-- SERTIFIKAT -->
+  <section id="v-certificate" class="hidden">
+    <h1>Sertifikat</h1>
+    <p>Sertifikat tiap bahasa terbuka setelah semua materinya disetujui admin.</p>
+    <div id="certList"></div>
   </section>
 
   <!-- AKUN -->
@@ -230,7 +243,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
   // ---------- Auth ----------
   function showAuth(msg) {
     $("auth").classList.remove("hidden");
-    ["v-home", "v-learn", "v-progress", "v-admin", "v-account"].forEach(v => $(v).classList.add("hidden"));
+    ["v-home", "v-learn", "v-progress", "v-admin", "v-account", "v-certificate"].forEach(v => $(v).classList.add("hidden"));
     $("links").classList.add("hidden");
     $("acct").classList.add("hidden");
     if (msg) $("authMsg").textContent = msg;
@@ -268,23 +281,24 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
     await loadMine();
     $("auth").classList.add("hidden");
     $("links").classList.remove("hidden");
-    $("links").innerHTML = "<button data-go='home'>Beranda</button><button data-go='learn'>Belajar</button><button data-go='progress'>Progres</button>" +
+    $("links").innerHTML = "<button data-go='home'>Beranda</button><button data-go='learn'>Belajar</button><button data-go='progress'>Progres</button><button data-go='certificate'>Sertifikat</button>" +
       (me.role === "admin" ? "<button data-go='admin'>Admin</button>" : "");
     $("links").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
     renderAccount();
     $("brand").addEventListener("click", e => { e.preventDefault(); go("home"); });
     const wanted = location.hash.replace("#", "");
-    go(["home", "learn", "progress", "admin", "account"].includes(wanted) ? wanted : "home");
+    go(["home", "learn", "progress", "certificate", "admin", "account"].includes(wanted) ? wanted : "home");
     if (justConfirmed) showBanner("Email kamu sudah dikonfirmasi. Selamat belajar!");
   }
 
   function go(view) {
     if (view === "admin" && me.role !== "admin") view = "home";
-    ["v-home", "v-learn", "v-progress", "v-admin", "v-account"].forEach(v => $(v).classList.add("hidden"));
+    ["v-home", "v-learn", "v-progress", "v-admin", "v-account", "v-certificate"].forEach(v => $(v).classList.add("hidden"));
     $("v-" + view).classList.remove("hidden");
     $("links").querySelectorAll("[data-go]").forEach(b => b.classList.toggle("on", b.dataset.go === view));
     if (view === "home") renderHome();
     if (view === "account") renderAccountPage();
+    if (view === "certificate") renderCertificate();
     if (view === "learn") renderLearn();
     if (view === "progress") renderProgress();
     if (view === "admin") renderAdminReview();
@@ -353,6 +367,36 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
     $("postBox").value = "";
     msg.className = "msg"; msg.textContent = "";
     loadDiscussion(lessonId);
+  }
+
+  // ---------- Sertifikat ----------
+  function renderCertificate() {
+    const box = $("certList");
+    box.innerHTML = Object.keys(LANGS).map(k => {
+      const ls = langLessons(k);
+      const approved = ls.filter(l => subs[l.id] && subs[l.id].status === "approved");
+      if (!ls.length || approved.length !== ls.length) {
+        return `<div class="cert locked" style="margin-bottom:14px"><h3>${LANGS[k]}</h3>
+          <p>Terkunci. ${approved.length} dari ${ls.length} materi disetujui admin.</p></div>`;
+      }
+      const times = approved.map(l => new Date(subs[l.id].reviewed_at || subs[l.id].created_at).getTime());
+      const date = new Date(Math.max(...times)).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+      const no = "KA-" + k.toUpperCase() + "-" + me.id.slice(0, 8).toUpperCase();
+      return `<div class="cert" data-cert="${k}" style="margin-bottom:14px;padding:32px;border:3px double var(--text)">
+        <p class="q" style="letter-spacing:3px;text-transform:uppercase;margin:0">KodeAwal</p>
+        <h2 style="font-size:26px;margin:8px 0 14px">Sertifikat Kompetensi</h2>
+        <p style="margin:0">Diberikan kepada</p>
+        <h1 style="margin:6px 0 14px">${esc(me.name || "Siswa")}</h1>
+        <p style="margin:0">atas keberhasilan menyelesaikan ${ls.length} materi ${esc(LANGS[k].name)} dan disetujui admin.</p>
+        <p class="q" style="margin-top:18px">${date} | No. ${no}</p>
+        <button class="btn small no-print" data-print="${k}" style="margin-top:14px">Simpan sebagai PDF</button>
+      </div>`;
+    }).join("");
+    box.querySelectorAll("[data-print]").forEach(b => b.addEventListener("click", () => {
+      document.querySelectorAll(".cert").forEach(c => c.classList.remove("printing"));
+      box.querySelector(`[data-cert="${b.dataset.print}"]`).classList.add("printing");
+      window.print();
+    }));
   }
 
   // ---------- Akun ----------
