@@ -69,8 +69,8 @@
 
 <!-- ISI DUA NILAI INI DARI DASHBOARD SUPABASE > Project Settings > API -->
 <script>
-const SUPABASE_URL = "https://vfimjafuslygvwwyqwks.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
+  const SUPABASE_URL = "ISI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "ISI_ANON_KEY";
 </script>
 
 <header><div class="wrap nav">
@@ -291,6 +291,70 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
     history.replaceState(null, "", "#" + view);
   }
 
+  // ---------- Latihan soal ----------
+  function renderQuiz(l, p) {
+    const box = $("quizBox");
+    const qs = Array.isArray(l.quiz) ? l.quiz : [];
+    if (!qs.length) {
+      box.innerHTML = "<p>Belum ada latihan soal untuk materi ini.</p>";
+      $("quizCheck").disabled = true;
+      return;
+    }
+    box.innerHTML = qs.map((q, qi) => `
+      <div style="margin-bottom:12px">
+        <h3>${qi + 1}. ${esc(q.q)}</h3>
+        ${q.opts.map((o, oi) => `<label style="display:block;color:var(--text);padding:3px 0;cursor:pointer">
+          <input type="radio" name="qz${qi}" value="${oi}" style="margin-right:8px">${esc(o)}</label>`).join("")}
+      </div>`).join("");
+    $("quizMsg").textContent = p.quiz_score != null ? "Skor terakhir: " + p.quiz_score + " dari " + qs.length : "";
+  }
+  async function checkQuiz(l) {
+    const qs = Array.isArray(l.quiz) ? l.quiz : [];
+    let score = 0;
+    qs.forEach((q, qi) => {
+      const c = document.querySelector(`input[name="qz${qi}"]:checked`);
+      if (c && Number(c.value) === Number(q.answer)) score++;
+    });
+    const err = await saveProgress(l.id, { quiz_score: score });
+    $("quizMsg").textContent = err ? "Gagal menyimpan: " + err.message : "Skor: " + score + " dari " + qs.length;
+  }
+
+  // ---------- Diskusi ----------
+  let discussLesson = null;
+  async function loadDiscussion(lessonId) {
+    discussLesson = lessonId;
+    const box = $("discussBox");
+    box.innerHTML = "<p>Memuat...</p>";
+    const { data, error } = await sb.from("discussions").select("id,user_id,body,created_at").eq("lesson_id", lessonId).order("created_at");
+    if (discussLesson !== lessonId) return;
+    if (error) { box.innerHTML = `<p class="msg warn">${esc(error.message)}</p>`; return; }
+    if (!data || !data.length) { box.innerHTML = "<p>Belum ada diskusi. Mulai dengan pertanyaan pertama.</p>"; return; }
+    const names = await userNames(data.map(d => d.user_id));
+    if (discussLesson !== lessonId) return;
+    box.innerHTML = data.map(d => `
+      <div style="border-bottom:1px solid var(--line);padding:10px 0">
+        <div class="q">${esc(names[d.user_id] || "Siswa")} | ${new Date(d.created_at).toLocaleString("id-ID")}
+          ${d.user_id === me.id || me.role === "admin" ? ` | <button class="btn ghost small" data-del="${d.id}" style="padding:2px 8px">Hapus</button>` : ""}
+        </div>
+        <p class="txt" style="margin:4px 0 0;white-space:pre-wrap">${esc(d.body)}</p>
+      </div>`).join("");
+    box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+      const { error: delErr } = await sb.from("discussions").delete().eq("id", b.dataset.del);
+      if (delErr) alert("Gagal menghapus: " + delErr.message);
+      loadDiscussion(lessonId);
+    }));
+  }
+  async function postDiscussion(lessonId) {
+    const text = $("postBox").value.trim();
+    const msg = $("postMsg");
+    if (!text) { msg.className = "msg warn"; msg.textContent = "Tulis komentar dulu."; return; }
+    const { error } = await sb.from("discussions").insert({ lesson_id: lessonId, user_id: me.id, body: text.slice(0, 1000) });
+    if (error) { msg.className = "msg warn"; msg.textContent = "Gagal mengirim: " + error.message; return; }
+    $("postBox").value = "";
+    msg.className = "msg"; msg.textContent = "";
+    loadDiscussion(lessonId);
+  }
+
   // ---------- Akun ----------
   const ROLE_LABEL = { siswa: "Siswa", pengajar: "Pengajar", admin: "Admin" };
   function initials(name) {
@@ -438,6 +502,27 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
           <button class="btn ghost small" id="bookmark">${p.bookmarked ? "Hapus simpanan" : "Simpan materi"}</button></div>
       </div>`;
 
+    if (ok) {
+      $("lessonView").insertAdjacentHTML("beforeend", `
+        <div class="panel">
+          <h3>Latihan soal</h3>
+          <div id="quizBox"></div>
+          <div class="row"><button class="btn small" id="quizCheck">Periksa jawaban</button></div>
+          <div class="msg" id="quizMsg"></div>
+        </div>
+        <div class="panel">
+          <h3>Diskusi</h3>
+          <div id="discussBox"></div>
+          <textarea class="field" id="postBox" placeholder="Tulis pertanyaan atau komentar..." style="max-width:100%"></textarea>
+          <div class="row"><button class="btn small" id="postBtn">Kirim komentar</button></div>
+          <div class="msg" id="postMsg"></div>
+        </div>`);
+      renderQuiz(l, p);
+      $("quizCheck").addEventListener("click", () => checkQuiz(l));
+      $("postBtn").addEventListener("click", () => postDiscussion(l.id));
+      loadDiscussion(l.id);
+    }
+
     const readBtn = $("readBtn");
     if (readBtn) readBtn.addEventListener("click", async () => {
       const err = await saveProgress(l.id, { watched: true });
@@ -562,16 +647,27 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
       <select class="field" id="mSel">${opts}</select>
       <input class="field" id="mTitle" placeholder="Judul">
       <textarea class="field" id="mBody" placeholder="Isi materi. Tulis contoh kode seperti biasa."></textarea>
+      <h3>Latihan soal</h3>
+      <p class="q">Satu soal per baris: pertanyaan|opsi1|opsi2|opsi3|nomor jawaban benar (mulai dari 0). Kosongkan jika tidak ada soal.</p>
+      <textarea class="field code" id="mQuiz" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:110px"></textarea>
       <div class="row"><button class="btn" id="mSave">Simpan materi</button><span class="msg" id="mMsg"></span></div>
     </div>`;
     const fill = () => {
       const l = lessons.find(x => x.id === Number($("mSel").value));
       $("mTitle").value = l.title; $("mBody").value = l.body || "";
+      $("mQuiz").value = (l.quiz || []).map(q => [q.q, ...q.opts, q.answer].join("|")).join("\n");
     };
     $("mSel").addEventListener("change", fill); fill();
     $("mSave").addEventListener("click", async () => {
       const id = Number($("mSel").value);
-      const { error } = await sb.from("lessons").update({ title: $("mTitle").value.trim(), body: $("mBody").value }).eq("id", id);
+      const quizLines = $("mQuiz").value.split("\n").map(x => x.trim()).filter(Boolean);
+      const quiz = quizLines.map(line => {
+        const parts = line.split("|");
+        return { q: (parts[0] || "").trim(), opts: parts.slice(1, -1).map(o => o.trim()), answer: Number(parts[parts.length - 1]) };
+      });
+      const bad = quiz.findIndex(x => !x.q || x.opts.length < 2 || !Number.isInteger(x.answer) || x.answer < 0 || x.answer >= x.opts.length);
+      if (bad !== -1) { $("mMsg").textContent = "Baris soal ke-" + (bad + 1) + " tidak sesuai format."; return; }
+      const { error } = await sb.from("lessons").update({ title: $("mTitle").value.trim(), body: $("mBody").value, quiz }).eq("id", id);
       $("mMsg").textContent = error ? "Gagal: " + error.message : "Tersimpan.";
       if (!error) { await loadMine(); renderAdminContent(); }
     });
