@@ -55,6 +55,13 @@
   .scroll { overflow-x:auto; }
   .shot { max-width:100%; max-height:260px; border-radius:8px; border:1px solid var(--line); display:block; margin-top:8px; }
   .hidden { display:none !important; }
+  .acct { position:relative; margin-left:auto; }
+  .avatar { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--text); display:inline-flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; font-size:13px; font-weight:600; padding:0; }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .avatar-lg { width:88px; height:88px; font-size:26px; cursor:default; }
+  .menu { position:absolute; right:0; top:42px; min-width:180px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:6px; z-index:10; }
+  .menu button { display:block; width:100%; text-align:left; background:none; border:0; padding:8px 10px; border-radius:6px; color:var(--text); cursor:pointer; }
+  .menu button:hover { background:var(--hover); color:#fff; }
   .q { font-size:12px; color:var(--muted); }
 </style>
 </head>
@@ -69,6 +76,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
 <header><div class="wrap nav">
   <a class="brand" href="#" id="brand">KodeAwal</a>
   <nav class="links hidden" id="links"></nav>
+  <div class="acct hidden" id="acct">
+    <button class="avatar" id="acctBtn" aria-label="Akun"></button>
+    <div class="menu hidden" id="acctMenu">
+      <button id="menuProfile">Profil saya</button>
+      <button id="menuLogout">Keluar</button>
+    </div>
+  </div>
 </div></header>
 
 <main class="wrap">
@@ -83,6 +97,43 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
       <button class="btn ghost" id="toggleAuth">Belum punya akun? Daftar</button>
     </div>
     <div class="msg" id="authMsg"></div>
+  </section>
+
+  <!-- AKUN -->
+  <section id="v-account" class="hidden">
+    <h1>Profil saya</h1>
+    <div class="panel" style="max-width:560px">
+      <div class="row" style="align-items:center">
+        <div class="avatar avatar-lg" id="bigAvatar"></div>
+        <div>
+          <button class="btn small ghost" id="avatarBtn">Ganti foto profil</button>
+          <input type="file" id="avatarFile" accept="image/*" class="hidden">
+          <div class="msg" id="avatarMsg"></div>
+        </div>
+      </div>
+      <h3 style="margin-top:16px">Nama tampilan</h3>
+      <input class="field" id="accName" maxlength="60">
+      <h3>Username</h3>
+      <input class="field" id="accUsername" maxlength="20" placeholder="contoh: rina_coding">
+      <p class="q">Huruf kecil, angka, atau garis bawah. 3 sampai 20 karakter.</p>
+      <h3>Email</h3>
+      <input class="field" id="accEmail" disabled>
+      <h3>Peran</h3><p class="txt" id="accRole"></p>
+      <h3>Bergabung sejak</h3><p class="txt" id="accJoined"></p>
+      <div class="row"><button class="btn" id="accSave">Simpan perubahan</button></div>
+      <div class="msg" id="accMsg"></div>
+    </div>
+  </section>
+
+  <!-- BERANDA -->
+  <section id="v-home" class="hidden">
+    <h1>Halo, <span id="homeName"></span></h1>
+    <p>Selamat datang di KodeAwal. Lanjutkan belajarmu atau pilih bahasa di bawah.</p>
+    <div class="row"><button class="btn" id="continueBtn">Lanjutkan</button></div>
+    <h2>Ringkasan</h2>
+    <div class="grid" id="homeStats"></div>
+    <h2>Pilih bahasa</h2>
+    <div class="grid" id="homeLangs"></div>
   </section>
 
   <!-- BELAJAR -->
@@ -126,6 +177,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
   if (SUPABASE_URL.startsWith("ISI_")) {
     document.body.insertAdjacentHTML("afterbegin", "<p class='wrap' style='color:var(--warn)'>Isi SUPABASE_URL dan SUPABASE_ANON_KEY di index.html terlebih dahulu.</p>");
   }
+  // Dibaca sebelum Supabase membersihkan alamat, untuk mendeteksi konfirmasi email
+  const justConfirmed = /type=(signup|email|recovery)/.test(location.hash) || /access_token=/.test(location.hash) || new URLSearchParams(location.search).get("type") === "signup";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let me = null;           // profil pengguna
@@ -177,8 +230,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
   // ---------- Auth ----------
   function showAuth(msg) {
     $("auth").classList.remove("hidden");
-    ["v-learn", "v-progress", "v-admin"].forEach(v => $(v).classList.add("hidden"));
+    ["v-home", "v-learn", "v-progress", "v-admin", "v-account"].forEach(v => $(v).classList.add("hidden"));
     $("links").classList.add("hidden");
+    $("acct").classList.add("hidden");
     if (msg) $("authMsg").textContent = msg;
   }
   $("toggleAuth").addEventListener("click", () => {
@@ -210,26 +264,130 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return showAuth();
     const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).single();
-    me = Object.assign({ id: user.id }, profile || { name: "Siswa", role: "siswa" });
+    me = Object.assign({ id: user.id, email: user.email }, profile || { name: "Siswa", role: "siswa" });
     await loadMine();
     $("auth").classList.add("hidden");
     $("links").classList.remove("hidden");
-    $("links").innerHTML = "<button data-go='learn'>Belajar</button><button data-go='progress'>Progres</button>" +
-      (me.role === "admin" ? "<button data-go='admin'>Admin</button>" : "") + "<button id='logout'>Keluar</button>";
+    $("links").innerHTML = "<button data-go='home'>Beranda</button><button data-go='learn'>Belajar</button><button data-go='progress'>Progres</button>" +
+      (me.role === "admin" ? "<button data-go='admin'>Admin</button>" : "");
     $("links").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
-    $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-    go(location.hash.replace("#", "") || "learn");
+    renderAccount();
+    $("brand").addEventListener("click", e => { e.preventDefault(); go("home"); });
+    const wanted = location.hash.replace("#", "");
+    go(["home", "learn", "progress", "admin", "account"].includes(wanted) ? wanted : "home");
+    if (justConfirmed) showBanner("Email kamu sudah dikonfirmasi. Selamat belajar!");
   }
 
   function go(view) {
-    if (view === "admin" && me.role !== "admin") view = "learn";
-    ["v-learn", "v-progress", "v-admin"].forEach(v => $(v).classList.add("hidden"));
+    if (view === "admin" && me.role !== "admin") view = "home";
+    ["v-home", "v-learn", "v-progress", "v-admin", "v-account"].forEach(v => $(v).classList.add("hidden"));
     $("v-" + view).classList.remove("hidden");
     $("links").querySelectorAll("[data-go]").forEach(b => b.classList.toggle("on", b.dataset.go === view));
+    if (view === "home") renderHome();
+    if (view === "account") renderAccountPage();
     if (view === "learn") renderLearn();
     if (view === "progress") renderProgress();
     if (view === "admin") renderAdminReview();
     history.replaceState(null, "", "#" + view);
+  }
+
+  // ---------- Akun ----------
+  const ROLE_LABEL = { siswa: "Siswa", pengajar: "Pengajar", admin: "Admin" };
+  function initials(name) {
+    return (name || "S").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  }
+  function avatarInner() {
+    return me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="Foto profil">` : esc(initials(me.name));
+  }
+  function renderAccount() {
+    $("acct").classList.remove("hidden");
+    $("acctBtn").innerHTML = avatarInner();
+  }
+  let accountWired = false;
+  function wireAccount() {
+    if (accountWired) return;
+    accountWired = true;
+    $("acctBtn").addEventListener("click", e => { e.stopPropagation(); $("acctMenu").classList.toggle("hidden"); });
+    document.addEventListener("click", () => $("acctMenu").classList.add("hidden"));
+    $("menuProfile").addEventListener("click", () => { $("acctMenu").classList.add("hidden"); go("account"); });
+    $("menuLogout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+    $("avatarBtn").addEventListener("click", () => $("avatarFile").click());
+    $("avatarFile").addEventListener("change", uploadAvatar);
+    $("accSave").addEventListener("click", saveAccount);
+  }
+  function renderAccountPage() {
+    wireAccount();
+    $("bigAvatar").innerHTML = avatarInner();
+    $("accName").value = me.name || "";
+    $("accUsername").value = me.username || "";
+    $("accEmail").value = me.email || "";
+    $("accRole").textContent = ROLE_LABEL[me.role] || me.role;
+    $("accJoined").textContent = me.created_at ? new Date(me.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-";
+    $("accMsg").textContent = "";
+    $("avatarMsg").textContent = "";
+  }
+  async function uploadAvatar(e) {
+    const f = e.target.files[0];
+    const msg = $("avatarMsg");
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { msg.className = "msg warn"; msg.textContent = "Ukuran foto maksimal 2 MB."; return; }
+    msg.className = "msg"; msg.textContent = "Mengunggah...";
+    const ext = (f.name.split(".").pop() || "png").toLowerCase();
+    const path = `${me.id}/avatar.${ext}`;
+    const up = await sb.storage.from("avatars").upload(path, f, { upsert: true, contentType: f.type });
+    if (up.error) { msg.className = "msg warn"; msg.textContent = "Gagal upload: " + up.error.message; return; }
+    const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl + "?v=" + Date.now();
+    const { error } = await sb.from("profiles").update({ avatar_url: url }).eq("id", me.id);
+    if (error) { msg.className = "msg warn"; msg.textContent = "Gagal menyimpan: " + error.message; return; }
+    me.avatar_url = url;
+    renderAccount(); renderAccountPage();
+    $("avatarMsg").className = "msg ok"; $("avatarMsg").textContent = "Foto profil diperbarui.";
+  }
+  async function saveAccount() {
+    const msg = $("accMsg");
+    const name = $("accName").value.trim().slice(0, 60) || "Siswa";
+    const username = $("accUsername").value.trim().toLowerCase();
+    if (username && !/^[a-z0-9_]{3,20}$/.test(username)) {
+      msg.className = "msg warn";
+      msg.textContent = "Username 3 sampai 20 karakter: huruf kecil, angka, atau garis bawah.";
+      return;
+    }
+    const { error } = await sb.from("profiles").update({ name, username: username || null }).eq("id", me.id);
+    if (error) {
+      msg.className = "msg warn";
+      msg.textContent = error.code === "23505" ? "Username itu sudah dipakai orang lain." : "Gagal menyimpan: " + error.message;
+      return;
+    }
+    me.name = name; me.username = username || null;
+    renderAccount(); renderAccountPage();
+    $("accMsg").className = "msg ok"; $("accMsg").textContent = "Perubahan tersimpan.";
+  }
+
+  // ---------- Beranda ----------
+  function renderHome() {
+    $("homeName").textContent = me.name || "Siswa";
+    const doneAll = lessons.filter(l => subs[l.id] && subs[l.id].status === "approved").length;
+    const pending = Object.values(subs).filter(s => s.status === "pending").length;
+    const langsDone = Object.keys(LANGS).filter(k => langLessons(k).some(l => subs[l.id] && subs[l.id].status === "approved")).length;
+    $("homeStats").innerHTML = `
+      <div class="card"><p>Materi disetujui</p><h3>${doneAll} dari ${lessons.length}</h3></div>
+      <div class="card"><p>Menunggu review</p><h3>${pending}</h3></div>
+      <div class="card"><p>Bahasa yang sudah dimulai</p><h3>${langsDone} dari ${Object.keys(LANGS).length}</h3></div>`;
+
+    const next = lessons.find(l => unlocked(l) && !(subs[l.id] && subs[l.id].status === "approved"));
+    const cont = $("continueBtn");
+    cont.disabled = !next;
+    cont.textContent = next ? "Lanjutkan: " + next.title : "Semua materi selesai";
+    cont.onclick = () => { if (next) { cur = { lang: next.lang, lesson: next.id }; go("learn"); } };
+
+    $("homeLangs").innerHTML = Object.keys(LANGS).map(k => {
+      const ls = langLessons(k), n = ls.filter(l => subs[l.id] && subs[l.id].status === "approved").length;
+      return `<button class="card" data-lang="${k}" style="text-align:left;background:var(--bg);color:var(--text);cursor:pointer;width:100%">
+        <h3>${LANGS[k]}</h3><p>${n} dari ${ls.length} materi disetujui</p></button>`;
+    }).join("");
+    $("homeLangs").querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
+      cur = { lang: b.dataset.lang, lesson: null }; go("learn");
+    }));
   }
 
   // ---------- Belajar ----------
@@ -419,9 +577,18 @@ const SUPABASE_ANON_KEY = "sb_publishable_0i-yYlyWnr2vRCZv_vp1Iw_6283ba_I";
   }
 
   // ---------- Mulai ----------
+  function showBanner(text) {
+    const b = document.createElement("div");
+    b.className = "panel"; b.style.marginTop = "0"; b.style.color = "var(--ok)";
+    b.textContent = text;
+    document.querySelector("main").prepend(b);
+    setTimeout(() => b.remove(), 6000);
+  }
   async function boot() {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) start(); else showAuth();
+    if (session) return start();
+    showAuth();
+    if (justConfirmed) $("authMsg").textContent = "Email kamu sudah dikonfirmasi. Silakan masuk.";
   }
   boot();
 </script>
